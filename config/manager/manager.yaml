@@ -17,11 +17,13 @@ spec:
         control-plane: controller-manager
         webhook: metal3-io-v1alpha1-baremetalhost
     spec:
+      securityContext:
+        runAsNonRoot: true
       containers:
       - command:
         - /baremetal-operator
         args:
-        - --enable-leader-election
+        - --leader-elect
         image: quay.io/metal3-io/baremetal-operator
         imagePullPolicy: Always
         env:
@@ -37,10 +39,19 @@ spec:
           - configMapRef:
               name: ironic
         name: manager
+        securityContext:
+          allowPrivilegeEscalation: false
         livenessProbe:
           httpGet:
             path: /healthz
             port: 9440
-          initialDelaySeconds: 3
-          periodSeconds: 3
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 9440
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

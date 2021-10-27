@@ -1536,6 +1536,12 @@ status:
   conditions: []
   storedVersions: []
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: baremetal-operator-controller-manager
+  namespace: baremetal-operator-system
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -1727,7 +1733,7 @@ roleRef:
   name: baremetal-operator-leader-election-role
 subjects:
 - kind: ServiceAccount
-  name: default
+  name: baremetal-operator-controller-manager
   namespace: baremetal-operator-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -1740,7 +1746,7 @@ roleRef:
   name: baremetal-operator-manager-role
 subjects:
 - kind: ServiceAccount
-  name: default
+  name: baremetal-operator-controller-manager
   namespace: baremetal-operator-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -1753,7 +1759,7 @@ roleRef:
   name: baremetal-operator-proxy-role
 subjects:
 - kind: ServiceAccount
-  name: default
+  name: baremetal-operator-controller-manager
   namespace: baremetal-operator-system
 ---
 apiVersion: v1
@@ -1770,6 +1776,25 @@ data:
 kind: ConfigMap
 metadata:
   name: baremetal-operator-ironic
+  namespace: baremetal-operator-system
+---
+apiVersion: v1
+data:
+  controller_manager_config.yaml: |
+    apiVersion: controller-runtime.sigs.k8s.io/v1alpha1
+    kind: ControllerManagerConfig
+    health:
+      healthProbeBindAddress: :8081
+    metrics:
+      bindAddress: 127.0.0.1:8080
+    webhook:
+      port: 9443
+    leaderElection:
+      leaderElect: true
+      resourceName: a9498140.metal3.io
+kind: ConfigMap
+metadata:
+  name: baremetal-operator-manager-config
   namespace: baremetal-operator-system
 ---
 apiVersion: v1
@@ -1831,8 +1856,8 @@ spec:
         - containerPort: 8443
           name: https
       - args:
-        - --metrics-addr=127.0.0.1:8085
-        - --enable-leader-election
+        - --metrics-bind-address=127.0.0.1:8085
+        - --leader-elect
         command:
         - /baremetal-operator
         env:
@@ -1853,17 +1878,28 @@ spec:
           httpGet:
             path: /healthz
             port: 9440
-          initialDelaySeconds: 3
-          periodSeconds: 3
+          initialDelaySeconds: 15
+          periodSeconds: 20
         name: manager
         ports:
         - containerPort: 9443
           name: webhook-server
           protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 9440
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        securityContext:
+          allowPrivilegeEscalation: false
         volumeMounts:
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: cert
           readOnly: true
+      securityContext:
+        runAsNonRoot: true
+      serviceAccountName: baremetal-operator-controller-manager
       terminationGracePeriodSeconds: 10
       volumes:
       - name: cert

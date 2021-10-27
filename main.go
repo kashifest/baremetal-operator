@@ -1,5 +1,5 @@
 /*
-
+Copyright 2021.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -97,9 +97,9 @@ func main() {
 	// namespace.
 	flag.StringVar(&watchNamespace, "namespace", os.Getenv("WATCH_NAMESPACE"),
 		"Namespace that the controller watches to reconcile host resources.")
-	flag.StringVar(&metricsAddr, "metrics-addr", "127.0.0.1:8085",
+	flag.StringVar(&metricsAddr, "metrics-bind-address", "127.0.0.1:8085",
 		"The address the metric endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
+	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.BoolVar(&preprovImgEnable, "build-preprov-image", false, "enable integration with the PreprovisioningImage API")
